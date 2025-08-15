@@ -13,16 +13,10 @@ def recommend(top):
     db = client["NewsDatabase"]
     collection = db["FullArticles"]
 
-    new_df = pd.DataFrame()
+    df = pd.DataFrame(collection.find().to_list())
+    df = df.drop("_id",axis=1)
 
-    for doc in collection.find():
-        articles_list = doc.get("Full Papers", [])
-        f = pd.DataFrame(articles_list)
-        new_df = pd.concat([new_df,f],ignore_index=True)
-
-    df_no_duplicates = new_df.drop_duplicates(subset=['Title','Link'],ignore_index=True,)
-
-    data = pd.Series(df_no_duplicates["News"])
+    data = pd.Series(df["news"])
 
     for i,art in enumerate(data):
         text_no_punct = art.translate(str.maketrans('', '', string.punctuation))
@@ -42,10 +36,13 @@ def recommend(top):
     source = collection.find_one({"dislikedArticles":{"$exists": True}})
     dislikedArticles = source.get("dislikedArticles")
 
-    likedIndexes = new_df[new_df["Link"].isin(likedArticles)].index
-    dislikedIndexes = new_df[new_df["Link"].isin(dislikedArticles)].index
+    likedIndexes = df[df["link"].isin(likedArticles)].index
+    meanlikedIndexes =  X[likedIndexes].mean(axis=0) if len(likedIndexes) > 0 else np.zeros(X[0].shape)
 
-    user_profile = X[likedIndexes].mean(axis=0) - X[dislikedIndexes].mean(axis=0)
+    dislikedIndexes = df[df["link"].isin(dislikedArticles)].index
+    meandislikedIndexes = X[dislikedIndexes].mean(axis=0) if len(dislikedArticles) > 0 else np.zeros(X[0].shape)
+    
+    user_profile = meanlikedIndexes - meandislikedIndexes
 
     similarities = cosine_similarity(np.array(user_profile), X.toarray()).flatten()
 
@@ -53,17 +50,13 @@ def recommend(top):
         similarities[idx] = -1
 
     top_indices = similarities.argsort()[::-1][:top]
-    top_indices_scores = similarities[similarities.argsort()[::-1][:top]]
-    print("Recommended articles:", top_indices)
-    print("scores",top_indices_scores)
+    #top_indices_scores = similarities[similarities.argsort()[::-1][:top]]
 
-    for i in likedIndexes:
-        print(df_no_duplicates.iloc[i]["Title"])
-
-    print("\n")
-    print("\n")
-
+    recommendList = []
     for i in top_indices:
-        print(df_no_duplicates.iloc[i]["Link"])
+        recommendList.append(df.iloc[i]["link"])
 
     client.close()
+    return recommendList
+
+print(recommend(10))

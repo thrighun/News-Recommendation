@@ -14,23 +14,7 @@ async function run(){
   const db = client.db("NewsDatabase")
   const col = db.collection("Articles")
   const papers = await col.find().toArray()
-  let articles = []
-  papers.forEach(data=>{
-    for(const [key, value] of Object.entries(data)){
-      if(key=='_id'){
-        continue
-      }
-      value.forEach(p=>articles.push(p))
-    }})
-  const seenLinks = new Set()
-  let uniqueArticles = []
-  for (const article of articles){
-    if (!(seenLinks.has(article.link))){
-      seenLinks.add(article.link)
-      uniqueArticles.push(article)
-    }
-  }
-  return uniqueArticles
+  return papers
 }
 
 async function react(){

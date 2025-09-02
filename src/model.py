@@ -7,7 +7,7 @@ from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-def recommend(top):
+def recommend(top=10):
     client = MongoClient("localhost", 27017)
 
     db = client["NewsDatabase"]
@@ -56,7 +56,10 @@ def recommend(top):
     for i in top_indices:
         recommendList.append(df.iloc[i]["link"])
 
-    client.close()
-    return recommendList
+    collection = db["User"]
+    collection.update_one({"_id":"recommend"},{"$set":{"Articles":recommendList}},upsert=True)
 
-print(recommend(10))
+    client.close()
+    return 
+
+recommend()
